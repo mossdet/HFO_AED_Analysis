@@ -21,8 +21,8 @@ def plot_analysis_results(group_label, all_rates_pre, all_rates_post, trim_ok):
     plot_analysis_barchart(axs[1], all_rates_pre, all_rates_post, trim_ok)
 
     plt.tight_layout()
-    wm = plt.get_current_fig_manager()
-    wm.window.state('zoomed')
+    # wm = plt.get_current_fig_manager()
+    # wm.window.state('zoomed')
     plt.show(block=False)
 
     figFilename = images_path+group_label+'.png'
@@ -150,7 +150,7 @@ def plot_analysis_boxplot(ax, all_rates_pre, all_rates_post, trim_ok):
             textstr += "HFO Rates decreased after AED\n"
         elif p_increase < 0.0125:
             textstr += "HFO Rates increased after AED\n"
-    textstr += "(p<0.0125))"
+    textstr += "(p<0.0125)"
 
     # place a text box in upper left in axes coords
     # these are matplotlib.patch.Patch properties

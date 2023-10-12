@@ -8,8 +8,6 @@ from file_groups import *
 from plotters import *
 
 
-trim_ok = False
-
 groups = ["All_Patients", "EEG_Improvement",
           "Clinical_Improvement", "Seizure_Free"]
 
@@ -78,6 +76,22 @@ for group_label in groups:
         eeg_duration_s = eeg_data_post.times[-1]/60
         hfo_rates_post = get_hfo_rates(annots_post, eeg_duration_s)
 
+        # Trim outlier channels
+        trim_ok = False
+        if trim_ok:
+            lp = 10
+            hp = 90
+            # Trim out outliers
+            hfo_rates_pre = np.array(hfo_rates_pre)
+            trim_sel = np.logical_and(hfo_rates_pre > np.percentile(
+                hfo_rates_pre, lp), hfo_rates_pre < np.percentile(hfo_rates_pre, hp))
+            hfo_rates_pre = hfo_rates_pre[trim_sel].tolist()
+
+            hfo_rates_post = np.array(hfo_rates_post)
+            trim_sel = np.logical_and(hfo_rates_post > np.percentile(
+                hfo_rates_post, lp), hfo_rates_post < np.percentile(hfo_rates_post, hp))
+            hfo_rates_post = hfo_rates_post[trim_sel].tolist()
+
         if len(all_rates_pre) == 0:
             pre_patid = np.full(len(hfo_rates_pre), idx1)
             post_patid = np.full(len(hfo_rates_post), idx1)
@@ -94,4 +108,5 @@ for group_label in groups:
     print([np.median(all_rates_pre[1, :]), np.median(all_rates_post[1, :])])
 
     # Plot Results
-    plot_analysis_results(group_label, all_rates_pre, all_rates_post, trim_ok)
+    plot_analysis_results(group_label, all_rates_pre,
+                          all_rates_post, trim_ok=False)
