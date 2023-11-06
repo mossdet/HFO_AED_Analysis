@@ -20,7 +20,7 @@ def get_hfo_rates(annots, duration_s):
         hfo_rate = sum(np.logical_and(sel_ch, sel_hfo))/duration_s
         hfo_rates.append(hfo_rate)
 
-    return hfo_rates
+    return np.array(channels), np.array(hfo_rates)
 
 
 def load_gs_file(mat_fname):

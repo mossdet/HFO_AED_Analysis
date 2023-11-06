@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from get_paths import *
 from data_extraction import *
+from file_groups import *
 
 
 def plot_analysis_results(group_label, all_rates_pre, all_rates_post, trim_ok):
@@ -63,23 +64,40 @@ def plot_analysis_barchart(ax, all_rates_pre, all_rates_post, trim_ok):
         pats_avg_pre.append(np.mean(pre_data))
         pats_avg_post.append(np.mean(post_data))
 
-        stats, p_same = scipy.stats.ranksums(
-            pre_data, post_data, alternative='two-sided')
-        stats, p_decrease = scipy.stats.ranksums(
-            pre_data, post_data, alternative='greater')
-        stats, p_increase = scipy.stats.ranksums(
-            pre_data, post_data, alternative='less')
-
-        if p_same >= 0.0125:
-            nr_pats_same += 1
+        use_paired_test = False
+        if use_paired_test:
+            # zero_method{“wilcox”, “pratt”, “zsplit”
+            zero_method_str = 'wilcox'
+            stats, p_same = scipy.stats.wilcoxon(
+                pre_data, post_data, zero_method=zero_method_str, alternative='two-sided')
+            stats, p_decrease = scipy.stats.wilcoxon(
+                pre_data, post_data, zero_method=zero_method_str, alternative='greater')
+            stats, p_increase = scipy.stats.wilcoxon(
+                pre_data, post_data, zero_method=zero_method_str, alternative='less')
         else:
-            if p_decrease < 0.0125:
-                nr_pats_decreased += 1
-            elif p_increase < 0.0125:
-                nr_pats_increased += 1
+            stats, p_same = scipy.stats.mannwhitneyu(
+                pre_data, post_data, alternative='two-sided')
+            stats, p_decrease = scipy.stats.mannwhitneyu(
+                pre_data, post_data, alternative='greater')
+            stats, p_increase = scipy.stats.mannwhitneyu(
+                pre_data, post_data, alternative='less')
 
-        for idx in range(len(pats_avg_pre)):
-            ax.plot([1, 2], [pats_avg_pre[idx], pats_avg_post[idx]], '-k')
+        alpha_val = 0.0167  # 0.0125
+        no_change_s = p_same > alpha_val
+        decrease_s = not (
+            no_change_s) and p_decrease <= alpha_val and p_decrease < p_same and p_decrease < p_increase
+        increase_s = not (
+            no_change_s) and p_increase <= alpha_val and p_increase < p_same and p_increase < p_decrease
+
+        if no_change_s+decrease_s+increase_s > 1:
+            stop = 1
+
+        nr_pats_same += no_change_s
+        nr_pats_decreased += decrease_s
+        nr_pats_increased += increase_s
+
+    for idx in range(len(pats_avg_pre)):
+        ax.plot([1, 2], [pats_avg_pre[idx], pats_avg_post[idx]], '-k')
 
     ax.bar(np.zeros(len(pats_avg_pre))+1, pats_avg_pre)
     ax.bar(np.zeros(len(pats_avg_post))+2, pats_avg_post)
@@ -95,13 +113,11 @@ def plot_analysis_barchart(ax, all_rates_pre, all_rates_post, trim_ok):
     textstr = f"Unchanged in {nr_pats_same:.1f}% of patients \n"
     textstr += f"Increase in {nr_pats_increased:.1f}% of patients \n"
     textstr += f"Decrease in {nr_pats_decreased:.1f}% of patients \n"
-    textstr += "(p<0.0125)"
+    textstr += f"(p<{alpha_val})"
 
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     ax.text(0.50, 0.85, textstr, transform=ax.transAxes, fontsize=10,
             horizontalalignment='center', verticalalignment='top', multialignment='center',  bbox=props)
-
-    stop = 1
 
 
 def plot_analysis_boxplot(ax, all_rates_pre, all_rates_post, trim_ok):
@@ -131,7 +147,7 @@ def plot_analysis_boxplot(ax, all_rates_pre, all_rates_post, trim_ok):
     ax.set_ylabel("HFO/minute", fontsize=18)
     ax.set_ylim(np.min(all_rates), np.max(all_rates))
 
-    # Perform statisitical tests
+    # Perform statisitical tests, ranksums, mannwhitneyu
     stats, p_same = scipy.stats.ranksums(
         all_rates_pre[1, :], all_rates_post[1, :], alternative='two-sided')  # 'two-sided', 'less', 'greater'
 
@@ -141,16 +157,26 @@ def plot_analysis_boxplot(ax, all_rates_pre, all_rates_post, trim_ok):
     stats, p_increase = scipy.stats.ranksums(
         all_rates_pre[1, :], all_rates_post[1, :], alternative='less')  # 'two-sided', 'less', 'greater'
 
+    alpha_val = 0.0167  # 0.0125
+    no_change_s = p_same > alpha_val
+    decrease_s = not (
+        no_change_s) and p_decrease <= alpha_val and p_decrease < p_same and p_decrease < p_increase
+    increase_s = not (
+        no_change_s) and p_increase <= alpha_val and p_increase < p_same and p_increase < p_decrease
+
     textstr = "HFO Rates pre- and post-AED are the same\n"
-    if p_same >= 0.0125:
+    if no_change_s:
         textstr = "HFO Rates pre- and post-AED are the same\n"
-    else:
+    elif decrease_s:
         textstr = "HFO Rates pre- and post-AED are different\n"
-        if p_decrease < 0.0125:
-            textstr += "HFO Rates decreased after AED\n"
-        elif p_increase < 0.0125:
-            textstr += "HFO Rates increased after AED\n"
-    textstr += "(p<0.0125)"
+        textstr += "HFO Rates decreased after AED\n"
+    elif increase_s:
+        textstr = "HFO Rates pre- and post-AED are different\n"
+        textstr += "HFO Rates increased after AED\n"
+    else:
+        textstr = "Undetermined behaviour!"
+
+    textstr += f"(p<{alpha_val})"
 
     # place a text box in upper left in axes coords
     # these are matplotlib.patch.Patch properties
