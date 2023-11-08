@@ -8,13 +8,14 @@ from data_extraction import *
 from file_groups import *
 
 
-def plot_analysis_results(group_label, all_rates_pre, all_rates_post, trim_ok):
+def plot_analysis_results(group_label, all_rates_pre, all_rates_post, hfo_type, trim_ok):
     # Plot Results
     nr_pats = int(len(np.unique(all_rates_pre[0, :])))
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(16, 9))
 
     sup_title_str = group_label.replace(
         '_', ' ') + "\n" + f"{nr_pats} Patients"
+    sup_title_str = hfo_type + "\n" + sup_title_str
     fig.suptitle(sup_title_str, fontsize=28)
 
     plot_analysis_boxplot(axs[0], all_rates_pre, all_rates_post, trim_ok)
@@ -26,7 +27,7 @@ def plot_analysis_results(group_label, all_rates_pre, all_rates_post, trim_ok):
     # wm.window.state('zoomed')
     plt.show(block=False)
 
-    figFilename = images_path+group_label+'.png'
+    figFilename = images_path+hfo_type + "_"+group_label+'.png'
     plt.savefig(figFilename, bbox_inches='tight', dpi=150)
     plt.close()
 
@@ -148,14 +149,12 @@ def plot_analysis_boxplot(ax, all_rates_pre, all_rates_post, trim_ok):
     ax.set_ylim(np.min(all_rates), np.max(all_rates))
 
     # Perform statisitical tests, ranksums, mannwhitneyu
-    stats, p_same = scipy.stats.ranksums(
-        all_rates_pre[1, :], all_rates_post[1, :], alternative='two-sided')  # 'two-sided', 'less', 'greater'
-
-    stats, p_decrease = scipy.stats.ranksums(
-        all_rates_pre[1, :], all_rates_post[1, :], alternative='greater')  # 'two-sided', 'less', 'greater'
-
-    stats, p_increase = scipy.stats.ranksums(
-        all_rates_pre[1, :], all_rates_post[1, :], alternative='less')  # 'two-sided', 'less', 'greater'
+    stats, p_same = scipy.stats.mannwhitneyu(
+        all_rates_pre[1, :], all_rates_post[1, :], alternative='two-sided')
+    stats, p_decrease = scipy.stats.mannwhitneyu(
+        all_rates_pre[1, :], all_rates_post[1, :], alternative='greater')
+    stats, p_increase = scipy.stats.mannwhitneyu(
+        all_rates_pre[1, :], all_rates_post[1, :], alternative='less')
 
     alpha_val = 0.0167  # 0.0125
     no_change_s = p_same > alpha_val

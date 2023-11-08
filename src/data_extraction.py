@@ -23,8 +23,88 @@ def get_hfo_rates(annots, duration_s):
     return np.array(channels), np.array(hfo_rates)
 
 
+def get_ieshfo_rates(annots, duration_s):
+    channels = np.unique(annots['channel'])
+    types = np.unique(annots['type'])
+
+    ies_hfo_rates = []
+    for ch in channels:
+        sel_ch = annots['channel'] == ch
+        sel_hfo = annots['type'] == 'HFO'
+        sel_ied = annots['type'] == 'IED'
+        ch_hfo_dict = {}
+        for key, val in annots.items():
+            ch_hfo_dict[key] = val[np.logical_and(sel_ch, sel_hfo)]
+
+        ch_ied_dict = {}
+        for key, val in annots.items():
+            ch_ied_dict[key] = val[np.logical_and(sel_ch, sel_ied)]
+
+        nr_hfo = sum(np.logical_and(sel_ch, sel_hfo))
+        nr_ied = sum(np.logical_and(sel_ch, sel_ied))
+
+        ies_hfo_sel = np.full((nr_hfo, 1), False, dtype=bool)
+        for hfo_idx in range(nr_hfo):
+            hfo_s = ch_hfo_dict['start_s'][hfo_idx]
+            hfo_e = ch_hfo_dict['end_s'][hfo_idx]
+            for ied_idx in range(nr_ied):
+                ied_s = ch_ied_dict['start_s'][ied_idx]
+                ied_e = ch_ied_dict['end_s'][ied_idx]
+                coincident_a = hfo_s >= ied_s and hfo_s <= ied_e
+                coincident_b = hfo_e >= ied_s and hfo_e <= ied_e
+                coincident = coincident_a or coincident_b
+                if coincident:
+                    ies_hfo_sel[hfo_idx] = True
+                    break
+
+        hfo_rate = np.sum(ies_hfo_sel)/duration_s
+        ies_hfo_rates.append(hfo_rate)
+
+    return np.array(channels), np.array(ies_hfo_rates)
+
+
+def get_isolhfo_rates(annots, duration_s):
+    channels = np.unique(annots['channel'])
+    types = np.unique(annots['type'])
+
+    isol_hfo_rates = []
+    for ch in channels:
+        sel_ch = annots['channel'] == ch
+        sel_hfo = annots['type'] == 'HFO'
+        sel_ied = annots['type'] == 'IED'
+        ch_hfo_dict = {}
+        for key, val in annots.items():
+            ch_hfo_dict[key] = val[np.logical_and(sel_ch, sel_hfo)]
+
+        ch_ied_dict = {}
+        for key, val in annots.items():
+            ch_ied_dict[key] = val[np.logical_and(sel_ch, sel_ied)]
+
+        nr_hfo = sum(np.logical_and(sel_ch, sel_hfo))
+        nr_ied = sum(np.logical_and(sel_ch, sel_ied))
+
+        isol_hfo_sel = np.full((nr_hfo, 1), True, dtype=bool)
+        for hfo_idx in range(nr_hfo):
+            hfo_s = ch_hfo_dict['start_s'][hfo_idx]
+            hfo_e = ch_hfo_dict['end_s'][hfo_idx]
+            for ied_idx in range(nr_ied):
+                ied_s = ch_ied_dict['start_s'][ied_idx]
+                ied_e = ch_ied_dict['end_s'][ied_idx]
+                coincident_a = hfo_s >= ied_s and hfo_s <= ied_e
+                coincident_b = hfo_e >= ied_s and hfo_e <= ied_e
+                coincident = coincident_a or coincident_b
+                if coincident:
+                    isol_hfo_sel[hfo_idx] = False
+                    break
+
+        hfo_rate = np.sum(isol_hfo_sel)/duration_s
+        isol_hfo_rates.append(hfo_rate)
+
+    return np.array(channels), np.array(isol_hfo_rates)
+
+
 def load_gs_file(mat_fname):
-    mat_contents = sio.loadmat(annotations_path+mat_fname)
+    mat_contents = sio.loadmat(mat_fname)
     detections_data = mat_contents['detections']
 
     # store data as a dictionary
