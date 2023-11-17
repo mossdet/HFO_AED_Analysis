@@ -103,6 +103,20 @@ def get_isolhfo_rates(annots, duration_s):
     return np.array(channels), np.array(isol_hfo_rates)
 
 
+def get_spike_rates(annots, duration_s):
+    channels = np.unique(annots['channel'])
+    types = np.unique(annots['type'])
+
+    spike_rates = []
+    for ch in channels:
+        sel_ch = annots['channel'] == ch
+        sel_spikes = annots['type'] == 'IED'
+        spike_rate = sum(np.logical_and(sel_ch, sel_spikes))/duration_s
+        spike_rates.append(spike_rate)
+
+    return np.array(channels), np.array(spike_rates)
+
+
 def load_gs_file(mat_fname):
     mat_contents = sio.loadmat(mat_fname)
     detections_data = mat_contents['detections']
